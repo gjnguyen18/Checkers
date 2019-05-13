@@ -1,5 +1,7 @@
 package application;
 
+import java.util.Stack;
+
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
@@ -30,15 +32,23 @@ public class CheckerBoard extends Screen {
 	checkersAI bot;
 	int turn;
 	
+	Stack<int[]> moves;
+	
 	// Other UI
 	Label redPieceCount;
 	Label blackPieceCount;
 	Label turnDisplay;
 	
+	boolean justJumped;
+	boolean pieceLock;
+	
 	public CheckerBoard(Group root) {
 		super(root);
 		pieceSelectedX = -1;
 		pieceSelectedY = -1;
+		justJumped = false;
+		pieceLock = false;
+		moves = new Stack<int[]>();
 		generateBoard();
 		generateUI();
 		updateBoardUI();
@@ -79,26 +89,178 @@ public class CheckerBoard extends Screen {
 		if(pieceX<0 && pieceY<0) {
 			return false;
 		}
-		if(!movePiece(pieceX,pieceY,targetX,targetY)) {
+		if(mustTakeAgain()) {
+			int x = moves.peek()[2];
+			int y = moves.peek()[3];
+			if(pieceX!=x || pieceY!=y) {
+				System.out.println("Must Jump Again");
+				return false;
+			}
 			if(!jumpPiece(pieceX,pieceY,targetX,targetY)) {
 				System.out.println("Invalid Move");
 				return false;
 			}
 		}
+		else if(mustTake()) {
+			if(attemptMovePiece(pieceX,pieceY,targetX,targetY)) {
+				System.out.println("Must Take");
+				return false;
+			}
+			if(!jumpPiece(pieceX,pieceY,targetX,targetY)) {
+				System.out.println("Invalid Move");
+				return false;
+			}
+		}
+		else {
+			if(!movePiece(pieceX,pieceY,targetX,targetY)) {
+				System.out.println("Invalid Move");
+				return false;
+			}
+		}
 		System.out.println("Move: " + pieceX + " " + pieceY + " " + targetX + " " + targetY);
-		selectedPiece = null;
-		pieceSelectedX = -1;
-		pieceSelectedY = -1;
+		moves.push(new int[] {pieceX, pieceY, targetX, targetY});
 		updateKings();
-		if(turn==1)
-			turn = 2;
-		else
-			turn = 1;
 		updateBoardUI();
+		if(!mustTakeAgain()) {
+			selectedPiece = null;
+			pieceSelectedX = -1;
+			pieceSelectedY = -1;
+			if(turn==1) {
+				turn = 2;
+				System.out.println("Black Move: "+numberOfBlackMoves());
+			}
+			else {
+				turn = 1;
+				System.out.println("Red Moves: "+numberOfRedMoves());
+			}
+			pieceLock = false;
+		}
+		else
+			pieceLock = true;
+		if(numberOfRed()==0 || numberOfRedMoves()==0) {
+			System.out.println("Black Wins!");
+		}
+		else if(numberOfBlack()==0 || numberOfBlackMoves()==0) {
+			System.out.println("Red Wins!");
+		}
 		return true;
 	}
 	
+	private boolean mustTake() {
+		for(int x=0;x<8;x++) {
+			for(int y=0;y<8;y++) {
+				if(board[y][x]%10==turn) {
+					if(canTake(x,y)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	
+	private boolean canTake(int x, int y) {
+		switch(board[y][x]) {
+		case 1:
+			if(y-2>=0) {
+				if(x-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
+					return true;
+				else if(x+2<8 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
+					return true;
+			}
+			break;
+		case 2:
+			if(y+2<8) {
+				if(x-2>=0 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
+					return true;
+				else if(x+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
+					return true;
+			}
+			break;
+		case 11:
+			if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
+				return true;
+			else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 2 && board[y+2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 2 && board[y+2][x+2] == 0)
+				return true;
+			break;
+		case 12:
+			if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 1 && board[y-2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 1 && board[y-2][x+2] == 0)
+				return true;
+			else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
+				return true;
+			break;
+		default:
+			break;
+		}
+		return false;
+	}
+	
+	private boolean mustTakeAgain() {
+		if(!justJumped)
+			return false;
+		int x = 0;
+		int y = 0;
+		if(!moves.isEmpty()) {
+			x = moves.peek()[2];
+			y = moves.peek()[3];
+		}
+		else {
+			return false;
+		}
+		switch(board[y][x]) {
+		case 1:
+			if(y-2>=0) {
+				if(x-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
+					return true;
+				else if(x+2<8 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
+					return true;
+			}
+			break;
+		case 2:
+			if(y+2<8) {
+				if(x-2>=0 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
+					return true;
+				else if(x+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
+					return true;
+			}
+			break;
+		case 11:
+			if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
+				return true;
+			else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 2 && board[y+2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 2 && board[y+2][x+2] == 0)
+				return true;
+			break;
+		case 12:
+			if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 1 && board[y-2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 1 && board[y-2][x+2] == 0)
+				return true;
+			else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
+				return true;
+			else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
+				return true;
+			break;
+		default:
+			break;
+		}
+		return false;
+	}
+	
 	private boolean movePiece(int pieceX, int pieceY, int targetX, int targetY) {
+		boolean jumpStat = justJumped;
+		justJumped = false;
 		if(board[pieceY][pieceX] >=11) {
 			if(Math.abs(pieceX-targetX)==1 && Math.abs(pieceY-targetY)==1) {
 				board[targetY][targetX] = board[pieceY][pieceX];
@@ -124,10 +286,37 @@ public class CheckerBoard extends Screen {
 				}
 			}
 		}
+		justJumped = jumpStat;
+		return false;
+	}
+	
+	private boolean attemptMovePiece(int pieceX, int pieceY, int targetX, int targetY) {
+		if(board[pieceY][pieceX] >=11) {
+			if(board[pieceY][pieceX]%10 == turn) {
+				if(Math.abs(pieceX-targetX)==1 && Math.abs(pieceY-targetY)==1) {
+					return true;
+				}
+			}
+		}
+		if(board[pieceY][pieceX] == 1 && turn == 1) {
+			if(pieceY-targetY==1) {
+				if(Math.abs(pieceX-targetX)==1) {
+					return true;
+				}
+			}
+		}
+		if(board[pieceY][pieceX] == 2 && turn == 2) {
+			if(pieceY-targetY==-1) {
+				if(Math.abs(pieceX-targetX)==1) {
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 	
 	private boolean jumpPiece(int pieceX, int pieceY, int targetX, int targetY) {
+		justJumped = true;
 		if(board[pieceY][pieceX] == 11) {
 			if(Math.abs(pieceX-targetX)==2 && Math.abs(pieceY-targetY)==2) {
 				if(board[pieceY+((targetY-pieceY)/2)][pieceX+((targetX-pieceX)/2)]%10 == 2) {
@@ -172,6 +361,8 @@ public class CheckerBoard extends Screen {
 				}
 			}
 		}
+		justJumped = false;
+		System.out.println("jump failed");
 		return false;
 	}
 	
@@ -213,53 +404,10 @@ public class CheckerBoard extends Screen {
 					square.setId("square2");
 				}
 				
-				int pieceSide = board[y][x];
+				int pieceSide = board[y][x]%10;
 				Button piece = new Button();
 				piece.setShape(new Circle(5));
-				piece.setPrefSize(squareLength/11, squareLength/11);
-				piece.setOnAction(
-						e -> {
-							if(turn!=pieceSide)
-								return;
-							
-							if(selectedPiece==piece) {
-								if(selectedPiece.getId().equals("redPieceSelected")) 
-									selectedPiece.setId("redPiece");
-								else if(selectedPiece.getId().equals("blackPieceSelected")) 
-									selectedPiece.setId("blackPiece");
-								else if(selectedPiece.getId().equals("redKingSelected")) 
-									selectedPiece.setId("redKing");
-								else if(selectedPiece.getId().equals("blackKingSelected")) 
-									selectedPiece.setId("blackKing");
-								selectedPiece = null;
-								pieceSelectedX = -1;
-								pieceSelectedY = -1;
-							}
-							else {
-								if(selectedPiece!=null) {
-									if(selectedPiece.getId().equals("redPieceSelected")) 
-										selectedPiece.setId("redPiece");
-									else if(selectedPiece.getId().equals("blackPieceSelected")) 
-										selectedPiece.setId("blackPiece");
-									else if(selectedPiece.getId().equals("redKingSelected")) 
-										selectedPiece.setId("redKing");
-									else if(selectedPiece.getId().equals("blackKingSelected")) 
-										selectedPiece.setId("blackKing");
-								}
-								selectedPiece = piece;
-								pieceSelectedX = x;
-								pieceSelectedY = y;
-								if(selectedPiece.getId().equals("redPiece")) 
-									selectedPiece.setId("redPieceSelected");
-								else if(selectedPiece.getId().equals("blackPiece")) 
-									selectedPiece.setId("blackPieceSelected");
-								else if(selectedPiece.getId().equals("redKing")) 
-									selectedPiece.setId("redKingSelected");
-								else if(selectedPiece.getId().equals("blackKing")) 
-									selectedPiece.setId("blackKingSelected");
-							}
-						}
-				);
+				piece.setPrefSize(squareLength/10, squareLength/10);
 				BorderPane centerPiece = new BorderPane(piece);
 				centerPiece.setPrefSize(squareLength/8, squareLength/8);
 				if(board[y][x] == 1) {
@@ -277,6 +425,38 @@ public class CheckerBoard extends Screen {
 				else if(board[y][x] == 12) {
 					piece.setId("blackKing");
 					squareGroup.getChildren().add(centerPiece);
+				}
+				piece.setOnAction(
+						e -> {
+							if(pieceLock)
+								return;
+							if(turn!=pieceSide)
+								return;
+							
+							if(selectedPiece==piece) {
+								selectedPiece.setId(selectedPiece.getId().replaceAll("Selected", ""));
+								selectedPiece = null;
+								pieceSelectedX = -1;
+								pieceSelectedY = -1;
+							}
+							else {
+								if(selectedPiece!=null) {
+									selectedPiece.setId(selectedPiece.getId().replaceAll("Selected", ""));
+								}
+								selectedPiece = piece;
+								pieceSelectedX = x;
+								pieceSelectedY = y;
+								selectedPiece.setId(selectedPiece.getId()+"Selected");
+							}
+						}
+				);
+				if(mustTakeAgain()) {
+					if(moves.peek()[2] == x && moves.peek()[3] == y) {
+						selectedPiece = piece;
+						pieceSelectedX = x;
+						pieceSelectedY = y;
+						selectedPiece.setId(selectedPiece.getId()+"Selected");
+					}
 				}
 				boardUI.add(squareGroup, i, k);
 			}
@@ -301,6 +481,96 @@ public class CheckerBoard extends Screen {
 			for(int k=0; k<8; k++) {
 				if(board[i][k]%10==2)
 					count++;
+			}
+		}
+		return count;
+	}
+	
+	private int numberOfRedMoves() {
+		int count = 0;
+		for(int x=0;x<8;x++) {
+			for(int y=0; y<8; y++) {
+				if(board[y][x]==1) { // normal piece
+					//moves
+					if(y-1>=0) {
+						if(x>0 && board[y-1][x-1]==0)
+							count++;
+						if(x<7 && board[y-1][x+1]==0)
+							count++;
+					}
+					//jumps
+					if(y-2>=0) {
+						if(x-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
+							count++;
+						else if(x+2<8 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
+							count++;
+					}
+				}
+				else if(board[y][x]==11) { // king
+					//jumps
+					if(x>0 && y>0 && board[y-1][x-1]==0)
+						count++;
+					if(x>0 && y<7 && board[y+1][x-1]==0)
+						count++;
+					if(x<7 && y>0 && board[y-1][x+1]==0)
+						count++;
+					if(x<7 && y<7 && board[y+1][x+1]==0)
+						count++;
+					//jumps
+					if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
+						count++;
+					else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
+						count++;
+					else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 2 && board[y+2][x-2] == 0)
+						count++;
+					else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 2 && board[y+2][x+2] == 0)
+						count++;
+				}
+			}
+		}
+		return count;
+	}
+	
+	private int numberOfBlackMoves() {
+		int count = 0;
+		for(int x=0;x<8;x++) {
+			for(int y=0; y<8; y++) {
+				if(board[y][x]==2) { // normal piece
+					//moves
+					if(y+1<8) {
+						if(x>0 && board[y+1][x-1]==0)
+							count++;
+						if(x<7 && board[y+1][x+1]==0)
+							count++;
+					}
+					//jumps
+					if(y+2<8) {
+						if(x-2>=0 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
+							count++;
+						else if(x+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
+							count++;
+					}
+				}
+				else if(board[y][x]==12) { // king
+					//jumps
+					if(x>0 && y>0 && board[y-1][x-1]==0)
+						count++;
+					if(x>0 && y<7 && board[y+1][x-1]==0)
+						count++;
+					if(x<7 && y>0 && board[y-1][x+1]==0)
+						count++;
+					if(x<7 && y<7 && board[y+1][x+1]==0)
+						count++;
+					//jumps
+					if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 1 && board[y-2][x-2] == 0)
+						count++;
+					else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 1 && board[y-2][x+2] == 0)
+						count++;
+					else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
+						count++;
+					else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
+						count++;
+				}
 			}
 		}
 		return count;
