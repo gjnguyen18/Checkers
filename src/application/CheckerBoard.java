@@ -1,7 +1,10 @@
 package application;
 
+import java.util.ArrayList;
 import java.util.Stack;
 
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
@@ -38,6 +41,7 @@ public class CheckerBoard extends Screen {
 	Label redPieceCount;
 	Label blackPieceCount;
 	Label turnDisplay;
+	Label thinking;
 	
 	boolean justJumped;
 	boolean pieceLock;
@@ -63,6 +67,14 @@ public class CheckerBoard extends Screen {
 		UIBorder.setPrefSize(200, 600);
 		UIBorder.setId("UIBorder");
 		addElement(UIBorder);
+		
+		thinking = new Label("Your Turn");
+		BorderPane thinkingBox = new BorderPane(thinking);
+		thinkingBox.setLayoutX(640);
+		thinkingBox.setLayoutY(30);
+		thinkingBox.setPrefSize(200, 100);
+		addElement(thinkingBox);
+		
 	}
 	
 	private void generateBoard() {
@@ -85,7 +97,7 @@ public class CheckerBoard extends Screen {
 		}
 	}
 	
-	private boolean move(int pieceX, int pieceY, int targetX, int targetY) {
+	public boolean move(int pieceX, int pieceY, int targetX, int targetY) {
 		if(pieceX<0 && pieceY<0) {
 			return false;
 		}
@@ -120,8 +132,20 @@ public class CheckerBoard extends Screen {
 		System.out.println("Move: " + pieceX + " " + pieceY + " " + targetX + " " + targetY);
 		moves.push(new int[] {pieceX, pieceY, targetX, targetY});
 		updateKings();
-		updateBoardUI();
+//		updateBoardUI();
+		Platform.runLater(new Runnable() {
+      @Override
+      public void run() {
+        updateBoardUI();
+      }
+    });     
 		if(!mustTakeAgain()) {
+			Platform.runLater(new Runnable() {
+	      @Override
+	      public void run() {
+	        thinking.setText("CPU turn");
+	      }
+	    });     
 			selectedPiece = null;
 			pieceSelectedX = -1;
 			pieceSelectedY = -1;
@@ -134,6 +158,44 @@ public class CheckerBoard extends Screen {
 				System.out.println("Red Moves: "+numberOfRedMoves());
 			}
 			pieceLock = false;
+			if(turn==2) {
+				Task<Void> task = new Task<Void>() {
+			    @Override 
+			    public Void call() {				
+			    	long timeStart = System.currentTimeMillis();
+			    	int[] bestMove = bot.findBestMove(board, 13, 2);
+			    	for(int i=0;i<bestMove.length;i+=4) {
+			    		try {
+					  		Platform.runLater(new Runnable() {
+						      @Override
+						      public void run() {
+						        updateBoardUI();
+						      }
+						    });
+					  		Thread.sleep(500);
+							} catch (InterruptedException e) {}
+			    		move(bestMove[i+0],bestMove[i+1],bestMove[i+2],bestMove[i+3]);
+			    	}
+			    	System.out.println("Time to compute: " + (System.currentTimeMillis()-timeStart));
+						return null;
+			    }
+				};
+				new Thread(task).start();
+	  		Platform.runLater(new Runnable() {
+		      @Override
+		      public void run() {
+		        updateBoardUI();
+		      }
+		    });
+			}
+			else if(turn==1) {
+				Platform.runLater(new Runnable() {
+		      @Override
+		      public void run() {
+		        thinking.setText("Your turn");
+		      }
+		    });     
+			}
 		}
 		else
 			pieceLock = true;
@@ -143,6 +205,7 @@ public class CheckerBoard extends Screen {
 		else if(numberOfBlack()==0 || numberOfBlackMoves()==0) {
 			System.out.println("Red Wins!");
 		}
+		
 		return true;
 	}
 	
@@ -432,6 +495,8 @@ public class CheckerBoard extends Screen {
 								return;
 							if(turn!=pieceSide)
 								return;
+							if(pieceSide!=1)
+								return;
 							
 							if(selectedPiece==piece) {
 								selectedPiece.setId(selectedPiece.getId().replaceAll("Selected", ""));
@@ -487,92 +552,110 @@ public class CheckerBoard extends Screen {
 	}
 	
 	private int numberOfRedMoves() {
-		int count = 0;
+		int moveCount = 0;
+		int jumpCount = 0;
 		for(int x=0;x<8;x++) {
 			for(int y=0; y<8; y++) {
 				if(board[y][x]==1) { // normal piece
 					//moves
-					if(y-1>=0) {
-						if(x>0 && board[y-1][x-1]==0)
-							count++;
-						if(x<7 && board[y-1][x+1]==0)
-							count++;
+					if(jumpCount==0) {
+						if(y-1>=0) {
+							if(x>0 && board[y-1][x-1]==0)
+								moveCount++;
+							if(x<7 && board[y-1][x+1]==0)
+								moveCount++;
+						}
 					}
 					//jumps
 					if(y-2>=0) {
 						if(x-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
-							count++;
+							jumpCount++;
 						else if(x+2<8 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
-							count++;
+							jumpCount++;
 					}
 				}
 				else if(board[y][x]==11) { // king
 					//jumps
-					if(x>0 && y>0 && board[y-1][x-1]==0)
-						count++;
-					if(x>0 && y<7 && board[y+1][x-1]==0)
-						count++;
-					if(x<7 && y>0 && board[y-1][x+1]==0)
-						count++;
-					if(x<7 && y<7 && board[y+1][x+1]==0)
-						count++;
+					if(jumpCount==0) {
+						if(x>0 && y>0 && board[y-1][x-1]==0)
+							moveCount++;
+						if(x>0 && y<7 && board[y+1][x-1]==0)
+							moveCount++;
+						if(x<7 && y>0 && board[y-1][x+1]==0)
+							moveCount++;
+						if(x<7 && y<7 && board[y+1][x+1]==0)
+							moveCount++;
+					}
 					//jumps
 					if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 2 && board[y-2][x-2] == 0)
-						count++;
+						jumpCount++;
 					else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 2 && board[y-2][x+2] == 0)
-						count++;
+						jumpCount++;
 					else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 2 && board[y+2][x-2] == 0)
-						count++;
+						jumpCount++;
 					else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 2 && board[y+2][x+2] == 0)
-						count++;
+						jumpCount++;
 				}
 			}
 		}
-		return count;
+		return jumpCount>0 ? jumpCount:moveCount;
 	}
 	
 	private int numberOfBlackMoves() {
-		int count = 0;
+		int moveCount = 0;
+		int jumpCount = 0;
 		for(int x=0;x<8;x++) {
 			for(int y=0; y<8; y++) {
 				if(board[y][x]==2) { // normal piece
 					//moves
-					if(y+1<8) {
-						if(x>0 && board[y+1][x-1]==0)
-							count++;
-						if(x<7 && board[y+1][x+1]==0)
-							count++;
+					if(jumpCount==0) {
+						if(y+1<8) {
+							if(x>0 && board[y+1][x-1]==0)
+								moveCount++;
+							if(x<7 && board[y+1][x+1]==0)
+								moveCount++;
+						}
 					}
 					//jumps
 					if(y+2<8) {
 						if(x-2>=0 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
-							count++;
+							jumpCount++;
 						else if(x+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
-							count++;
+							jumpCount++;
 					}
 				}
 				else if(board[y][x]==12) { // king
 					//jumps
-					if(x>0 && y>0 && board[y-1][x-1]==0)
-						count++;
-					if(x>0 && y<7 && board[y+1][x-1]==0)
-						count++;
-					if(x<7 && y>0 && board[y-1][x+1]==0)
-						count++;
-					if(x<7 && y<7 && board[y+1][x+1]==0)
-						count++;
+					if(jumpCount==0) {
+						if(x>0 && y>0 && board[y-1][x-1]==0)
+							moveCount++;
+						if(x>0 && y<7 && board[y+1][x-1]==0)
+							moveCount++;
+						if(x<7 && y>0 && board[y-1][x+1]==0)
+							moveCount++;
+						if(x<7 && y<7 && board[y+1][x+1]==0)
+							moveCount++;
+					}
 					//jumps
 					if(x-2>=0 && y-2>=0 && board[y-1][x-1]%10 == 1 && board[y-2][x-2] == 0)
-						count++;
+						jumpCount++;
 					else if(x+2<8 && y-2>=0 && board[y-1][x+1]%10 == 1 && board[y-2][x+2] == 0)
-						count++;
+						jumpCount++;
 					else if(x-2>=0 && y+2<8 && board[y+1][x-1]%10 == 1 && board[y+2][x-2] == 0)
-						count++;
+						jumpCount++;
 					else if(x+2<8 && y+2<8 && board[y+1][x+1]%10 == 1 && board[y+2][x+2] == 0)
-						count++;
+						jumpCount++;
 				}
 			}
 		}
-		return count;
+		return jumpCount>0 ? jumpCount:moveCount;
+	}
+	
+	public int getTurn() {
+		return turn;
+	}
+	
+	public int[][] getBoard() {
+		return board;
 	}
 }
