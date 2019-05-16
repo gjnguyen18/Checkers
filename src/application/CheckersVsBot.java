@@ -1,11 +1,9 @@
 package application;
 
-import java.util.ArrayList;
 import java.util.Stack;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -14,7 +12,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
 
-public class CheckerBoard extends Screen {
+public class CheckersVsBot extends Screen {
 
 	/*
 	 * 1 = red
@@ -31,8 +29,6 @@ public class CheckerBoard extends Screen {
 	Button selectedPiece;
 	int pieceSelectedX;
 	int pieceSelectedY;
-	
-	checkersAI bot;
 	int turn;
 	
 	Stack<int[]> moves;
@@ -41,12 +37,12 @@ public class CheckerBoard extends Screen {
 	Label redPieceCount;
 	Label blackPieceCount;
 	Label turnDisplay;
-	Label thinking;
+	Label turnLabel;
 	
 	boolean justJumped;
 	boolean pieceLock;
 	
-	public CheckerBoard(Group root) {
+	public CheckersVsBot(Group root) {
 		super(root);
 		pieceSelectedX = -1;
 		pieceSelectedY = -1;
@@ -56,7 +52,6 @@ public class CheckerBoard extends Screen {
 		generateBoard();
 		generateUI();
 		updateBoardUI();
-		bot = new checkersAI();
 		turn = 1;
 	}
 	
@@ -68,13 +63,12 @@ public class CheckerBoard extends Screen {
 		UIBorder.setId("UIBorder");
 		addElement(UIBorder);
 		
-		thinking = new Label("Your Turn");
-		BorderPane thinkingBox = new BorderPane(thinking);
-		thinkingBox.setLayoutX(640);
-		thinkingBox.setLayoutY(30);
-		thinkingBox.setPrefSize(200, 100);
-		addElement(thinkingBox);
-		
+		turnLabel = new Label("Your Turn");
+		BorderPane turnLabelBox = new BorderPane(turnLabel);
+		turnLabelBox.setLayoutX(640);
+		turnLabelBox.setLayoutY(30);
+		turnLabelBox.setPrefSize(200, 100);
+		addElement(turnLabelBox);
 	}
 	
 	private void generateBoard() {
@@ -132,18 +126,37 @@ public class CheckerBoard extends Screen {
 		System.out.println("Move: " + pieceX + " " + pieceY + " " + targetX + " " + targetY);
 		moves.push(new int[] {pieceX, pieceY, targetX, targetY});
 		updateKings();
-//		updateBoardUI();
 		Platform.runLater(new Runnable() {
       @Override
       public void run() {
         updateBoardUI();
       }
-    });     
+    });
+		if(numberOfRed()==0 || numberOfRedMoves()==0) {
+			System.out.println("Black Wins!");
+			Platform.runLater(new Runnable() {
+	      @Override
+	      public void run() {
+	      	turnLabel.setText("Black Wins!");
+	      }
+	    });
+			return true;
+		}
+		else if(numberOfBlack()==0 || numberOfBlackMoves()==0) {
+			System.out.println("Red Wins!");
+			Platform.runLater(new Runnable() {
+	      @Override
+	      public void run() {
+	      	turnLabel.setText("Red Wins!");
+	      }
+	    });
+			return true;
+		}
 		if(!mustTakeAgain()) {
 			Platform.runLater(new Runnable() {
 	      @Override
 	      public void run() {
-	        thinking.setText("CPU turn");
+	        turnLabel.setText("CPU turn");
 	      }
 	    });     
 			selectedPiece = null;
@@ -163,7 +176,7 @@ public class CheckerBoard extends Screen {
 			    @Override 
 			    public Void call() {				
 			    	long timeStart = System.currentTimeMillis();
-			    	int[] bestMove = bot.findBestMove(board, 13, 2);
+			    	int[] bestMove = CheckersAI.findBestMove(board, 12, 2, true);
 			    	for(int i=0;i<bestMove.length;i+=4) {
 			    		try {
 					  		Platform.runLater(new Runnable() {
@@ -192,20 +205,13 @@ public class CheckerBoard extends Screen {
 				Platform.runLater(new Runnable() {
 		      @Override
 		      public void run() {
-		        thinking.setText("Your turn");
+		        turnLabel.setText("Your turn");
 		      }
 		    });     
 			}
 		}
 		else
-			pieceLock = true;
-		if(numberOfRed()==0 || numberOfRedMoves()==0) {
-			System.out.println("Black Wins!");
-		}
-		else if(numberOfBlack()==0 || numberOfBlackMoves()==0) {
-			System.out.println("Red Wins!");
-		}
-		
+			pieceLock = true;		
 		return true;
 	}
 	

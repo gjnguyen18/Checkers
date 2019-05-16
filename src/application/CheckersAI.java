@@ -1,38 +1,36 @@
 package application;
 
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class checkersAI {
-
-	// side: 1 = red, 2 = black
-	public int[] makeMove(int[][] board, int side) {
-		int[] move = new int[4];
-		return move;
-	}
+public class CheckersAI {
 	
-	private int numberOfRed(int[][] board) {
-		int count = 0;
+	private static int[] pieceCount(int[][] board) {
+		int[] count = new int[4];
 		for(int i=0;i<8;i++) {
 			for(int k=0; k<8; k++) {
-				if(board[i][k]%10==1)
-					count++;
+				switch(board[i][k]) {
+				case 1:
+					count[0]++;
+					break;
+				case 2:
+					count[1]++;
+					break;
+				case 11:
+					count[2]++;
+					break;
+				case 12:
+					count[3]++;
+					break;
+				}
 			}
 		}
 		return count;
 	}
 	
-	private int numberOfBlack(int[][] board) {
-		int count = 0;
-		for(int i=0;i<8;i++) {
-			for(int k=0; k<8; k++) {
-				if(board[i][k]%10==2)
-					count++;
-			}
-		}
-		return count;
-	}
-	
-	private ArrayList<int[]> possibleRedMoves(int[][] board) {
+	private static ArrayList<int[]> possibleRedMoves(int[][] board) {
 		boolean clearedMoves = false;
 		ArrayList<int[]> moves = new ArrayList<int[]>();
 		ArrayList<int[]> jumps = new ArrayList<int[]>();
@@ -94,7 +92,7 @@ public class checkersAI {
 		return moves;
 	}
 	
-	private ArrayList<int[]> possibleBlackMoves(int[][] board) {
+	private static ArrayList<int[]> possibleBlackMoves(int[][] board) {
 		boolean clearedMoves = false;
 		ArrayList<int[]> moves = new ArrayList<int[]>();
 		ArrayList<int[]> jumps = new ArrayList<int[]>();
@@ -156,7 +154,7 @@ public class checkersAI {
 		return moves;
 	}
 	
-	private void findJumpLines(int[][] board, int[] jump, ArrayList<int[]> possibilities) {
+	private static void findJumpLines(int[][] board, int[] jump, ArrayList<int[]> possibilities) {
 		int[][] newBoard = cloneBoard(board);
 		move(newBoard,jump[jump.length-4],jump[jump.length-3],jump[jump.length-2],jump[jump.length-1]);
 		
@@ -179,7 +177,7 @@ public class checkersAI {
 		}
 	}
 	
-	private ArrayList<int[]> possibleJumps(int[][] board, int x, int y) {
+	private static ArrayList<int[]> possibleJumps(int[][] board, int x, int y) {
 		ArrayList<int[]> jumps = new ArrayList<int[]>();
 		switch(board[y][x]) {
 		case 1:
@@ -224,7 +222,7 @@ public class checkersAI {
 		return jumps;
 	}
 	
-	private void move(int[][] board, int pieceX, int pieceY, int targetX, int targetY) {
+	private static void move(int[][] board, int pieceX, int pieceY, int targetX, int targetY) {
 		if(Math.abs(pieceX-targetX)==1 && Math.abs(pieceY-targetY)==1) {
 			board[targetY][targetX] = board[pieceY][pieceX];
 			board[pieceY][pieceX] = 0;
@@ -234,150 +232,71 @@ public class checkersAI {
 			board[pieceY][pieceX] = 0;
 			board[pieceY+((targetY-pieceY)/2)][pieceX+((targetX-pieceX)/2)] = 0;
 		}
-	}
-	
-//	public int[] findBestMove(int[][] board, int maxDepth, int side) {
-//		int[] bestMove = new int[4];
-//		int[][] bestBoardState = cloneBoard(board);
-//		int totalPossibleBoards = 0;
-//		ArrayList<int[]> moves = side==1? possibleRedMoves(board):possibleBlackMoves(board);
-//		int turn = side==1? 1:-1;
-//		for(int[] m:moves) { 
-//			int[][] newBoard = cloneBoard(board);
-//			for(int i=0;i<m.length;i+=4) {
-//				move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
-//			}
-//			ArrayList<int[][]> possibleBoards = new ArrayList<int[][]>();
-//			findAllPossibleMoves(newBoard, 0, maxDepth, turn ,possibleBoards);
-//			for(int[][] b:possibleBoards) {
-//				if(compareBoards(b,bestBoardState,side)>0) {
-//					bestBoardState = b;
-//					bestMove = m;
-//				}
-//			}
-//			totalPossibleBoards+=possibleBoards.size();
-//		}
-//		System.out.println("Total Possible States of Depth " + maxDepth + ": " + totalPossibleBoards);
-//		return bestMove;
-//	}
-	
-	private int compareBoards(int[][] board1, int[][] board2, int side) {
-
-		int b1Value = numberOfRed(board1)-numberOfBlack(board1);
-		int b2Value = numberOfRed(board2)-numberOfBlack(board2);
-		
-		if(side==1) {
-			return b1Value-b2Value;
-		}
-		else {
-			b1Value = -1*b1Value;
-			b2Value = -1*b2Value;
-			return b1Value-b2Value;
-		}
-	}
-	
-	private int boardScore(int[][] board) {
-		return numberOfRed(board)-numberOfBlack(board);
-	}
-	
-//	private void findAllPossibleMoves(int[][] board, int depth, int maxDepth, int turn, ArrayList<int[][]> possibilities) {
-//		if(depth>=maxDepth) {
-//			possibilities.add(board);
-//			return;
-//		}
-//		ArrayList<int[]> moves = turn==1? possibleRedMoves(board):possibleBlackMoves(board);
-//		for(int[] m:moves) { 
-//			int[][] newBoard = cloneBoard(board);
-//			for(int i=0;i<m.length;i+=4) {
-//				move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
-//			}
-//			findAllPossibleMoves(newBoard, depth+1, maxDepth, turn*-1,possibilities);
-//		}
-//	} 
-	
-	private void findAllPossibleMoves(int[][] board, int depth, int maxDepth, int turn, Node curr) {
-		if(depth>=maxDepth) {
-			curr.board = board;
-			return;
-		}
-		ArrayList<int[]> moves = turn==1? possibleRedMoves(board):possibleBlackMoves(board);
-		for(int[] m:moves) { 
-			Node n = new Node();
-			curr.children.add(n);
-			int[][] newBoard = cloneBoard(board);
-			for(int i=0;i<m.length;i+=4) {
-				move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
+		//update kings
+		for(int i=0;i<8;i++) {
+			if(board[0][i]==1) {
+				board[0][i]=11;
 			}
-			findAllPossibleMoves(newBoard, depth+1, maxDepth, turn*-1,n);
+			if(board[7][i]==2) {
+				board[7][i]=12;
+			}
 		}
-	} 
+	}
 	
-//	private int[][] minimax(int[][] board, int depth, boolean maximizing) {
-//		if(depth==0 || numberOfRed(board)==0 || numberOfBlack(board)==0) {
-//			return board;
-//		}
-//		else if(maximizing) {
-//			int maxEval = -100000;
-//			int[][] bestBoard = new int[8][8];
-//			ArrayList<int[]> moves = possibleRedMoves(board);
-//			for(int[] m:moves) {
-//				int[][] newBoard = cloneBoard(board);
-//				for(int i=0;i<m.length;i+=4) {
-//					move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
-//				}
-//				int[][] lowerBoard = minimax(newBoard,depth-1,!maximizing);
-//				if(boardScore(lowerBoard)>maxEval) {
-//					maxEval = boardScore(lowerBoard);
-//					bestBoard = lowerBoard;
-//				}
-//			}
-//			return bestBoard;
-//		}
-//		else {
-//			int minEval = 100000;
-//			int[][] bestBoard = new int[8][8];
-//			ArrayList<int[]> moves = possibleBlackMoves(board);
-//			for(int[] m:moves) {
-//				int[][] newBoard = cloneBoard(board);
-//				for(int i=0;i<m.length;i+=4) {
-//					move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
-//				}
-//				int[][] lowerBoard = minimax(newBoard,depth-1,!maximizing);
-//				if(boardScore(lowerBoard)<minEval) {
-//					minEval = boardScore(lowerBoard);
-//					bestBoard = lowerBoard;
-//				}
-//			}
-//			return bestBoard;
-//		}
-//	}
-//	
-//	public int[] findBestMove(int[][] board, int maxDepth, int side) {
-//		int[] bestMove = new int[4];
-//		int minBoardScore = 100000;
-//		int[][] bestBoardState = cloneBoard(board);
-//		ArrayList<int[]> moves = side==1? possibleRedMoves(board):possibleBlackMoves(board);
-//		int turn = side==1? 1:-1;
-//		for(int[] m:moves) { 
-//			int[][] newBoard = cloneBoard(board);
-//			for(int i=0;i<m.length;i+=4) {
-//				move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
-//			}
-//			int[][] possibleBoard = minimax(board,maxDepth,false);
-//			if(boardScore(possibleBoard)<minBoardScore) {
-//				bestMove = m;
-//				minBoardScore = boardScore(possibleBoard);
-//			}
-//		}
-//		return bestMove;
-//	}
+	/**
+	 * Return best score based on board position
+	 * @param board - current board
+	 * @return score - higher score for better red position
+	 */
+	private static int boardScore(int[][] board, int depth) {
+		int redScore = 0;
+		int blackScore = 0;
+		for(int x=0;x<8;x++) {
+			for(int y=0; y<8; y++) {
+				switch(board[y][x]) {
+				case 1:
+					redScore+=3;
+					if((y==3 || y==4) && x>=2 && x<=5) {
+						redScore+=1;
+					}
+					break;
+				case 2:
+					blackScore+=3;
+					if((y==3 || y==4) && x>=2 && x<=5) {
+						blackScore+=1;
+					}
+					break;
+				case 11:
+					redScore+=5;
+					if((y==3 || y==4) && x>=2 && x<=5) {
+						redScore+=2;
+					}
+					break;
+				case 12:
+					blackScore+=5;
+					if((y==3 || y==4) && x>=2 && x<=5) {
+						blackScore+=2;
+					}
+					break;
+				}
+			}
+		}
+		if(redScore==0)
+			return -1000*(depth);
+		if(blackScore==0)
+			return 1000*(depth);
+		return redScore-blackScore;
+	}
 	
-	private int[][] minimax(int[][] board, int depth, boolean maximizing, int alpha, int beta) {
-		if(depth==0 || numberOfRed(board)==0 || numberOfBlack(board)==0) {
+	private static int[][] minimax(int[][] board, int depth, boolean maximizing, 
+			int alpha, int beta, int[] pruneCount, boolean pruneOn) {
+		int[] pieceCount = pieceCount(board);
+		if(depth==0 || pieceCount[0]+pieceCount[2]==0 || pieceCount[1]+pieceCount[3]==0) {
+			pruneCount[1]++;
 			return board;
 		}
 		if(maximizing) {
-			int maxEval = -100000;
+			int maxEval = -1000000;
 			int[][] bestBoard = board;
 			ArrayList<int[]> moves = possibleRedMoves(board);
 			maxLoop:
@@ -386,22 +305,22 @@ public class checkersAI {
 				for(int i=0;i<m.length;i+=4) {
 					move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
 				}
-				int[][] lowerBoard = minimax(newBoard,depth-1,false,alpha,beta);
-				int eval = boardScore(lowerBoard);
+				int[][] lowerBoard = minimax(newBoard,depth-1,false,alpha,beta, pruneCount, pruneOn);
+				int eval = boardScore(lowerBoard,depth);
 				if(eval>maxEval) {
 					maxEval = eval;
 					bestBoard = lowerBoard;
 				}
 				alpha = Math.max(alpha, maxEval);
-				if(beta<=alpha) {
-//					System.out.println("prune");
+				if(beta<=alpha && pruneOn) {
+					pruneCount[0]++;
 					break maxLoop;
 				}
 			}
 			return bestBoard;
 		}
 		else {
-			int minEval = 100000;
+			int minEval = 1000000;
 			int[][] bestBoard = board;
 			ArrayList<int[]> moves = possibleBlackMoves(board);
 			minLoop:
@@ -410,15 +329,15 @@ public class checkersAI {
 				for(int i=0;i<m.length;i+=4) {
 					move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
 				}
-				int[][] lowerBoard = minimax(newBoard,depth-1,true,alpha,beta);
-				int eval = boardScore(lowerBoard);
+				int[][] lowerBoard = minimax(newBoard,depth-1,true,alpha,beta, pruneCount, pruneOn);
+				int eval = boardScore(lowerBoard,depth);
 				if(eval<minEval) {
 					minEval = eval;
 					bestBoard = lowerBoard;
 				}
 				beta = Math.min(beta, minEval);
-				if(beta<=alpha) {
-//					System.out.println("prune");
+				if(beta<=alpha && pruneOn) {
+					pruneCount[0]++;
 					break minLoop;
 				}
 			}
@@ -426,9 +345,11 @@ public class checkersAI {
 		}
 	}
 	
-	public int[] findBestMove(int[][] board, int maxDepth, int side) {
+	// does not multi thread
+	public static int[] findBestMove2(int[][] board, int maxDepth, int side, boolean pruneOn) {
 		int[] bestMove = new int[4];
 		int minBoardScore = 100000;
+		int[] pruneCount = new int[2];
 		int[][] bestBoardState = cloneBoard(board);
 		ArrayList<int[]> moves = side==1? possibleRedMoves(board):possibleBlackMoves(board);
 		for(int[] m:moves) { 
@@ -436,18 +357,71 @@ public class checkersAI {
 			for(int i=0;i<m.length;i+=4) {
 				move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
 			}
-			int[][] lowerBoard = minimax(newBoard,maxDepth,true,-100000, 100000);
-			int eval = boardScore(lowerBoard);
+			int[][] lowerBoard = minimax(newBoard,maxDepth,true,-100000, 100000, pruneCount, pruneOn);
+			int eval = boardScore(lowerBoard,maxDepth);
 			if(eval<minBoardScore) {
 				bestMove = m;
 				minBoardScore = eval;
 			}
+			System.out.println("Thread Finished");
 		}
+		System.out.println("Alpha-Beta Prunes: " + pruneCount[0]);
+		System.out.println("Leafs Visited: " + pruneCount[1]);
 		return bestMove;
 	}
 	
+	// multi thread the first possible moves
+	public static int[] findBestMove(int[][] board, int maxDepth, int side, boolean pruneOn) {
+		int[] totalPruneCount = new int[2];
+	  ArrayList<int[][]> possibleBoards = new ArrayList<int[][]>();
+	  ArrayList<int[]> possibleMoves = new ArrayList<int[]>();
+		
+		ArrayList<int[]> moves = side==1 ? possibleRedMoves(board):possibleBlackMoves(board);
+		int totalTasks = moves.size();
+		ExecutorService executor = Executors.newFixedThreadPool(totalTasks);
+		CountDownLatch latch = new CountDownLatch(totalTasks);
+		
+		for(int[] m:moves) { 
+			int[][] newBoard = cloneBoard(board);
+			for(int i=0;i<m.length;i+=4) {
+				move(newBoard,m[i],m[i+1],m[i+2],m[i+3]);
+			}
+			possibleBoards.add(new int[8][8]);
+			possibleMoves.add(m);
+			int index = possibleBoards.size()-1;
+			executor.submit(() -> {
+				int[] pruneCount = new int[2];
+		    possibleBoards.set(index,minimax(newBoard,maxDepth,true,-1000000, 1000000, pruneCount, pruneOn));
+		    totalPruneCount[0] += pruneCount[0];
+		    totalPruneCount[1] += pruneCount[1];
+		    latch.countDown();
+			});		
+		}
+		
+		System.out.println("Thread Pool Calculating");
+		try {
+			latch.await();
+		} catch (InterruptedException e) {}
+		System.out.println("Thread Pool Finished");
+		
+		int minBoardScore = 100000;
+		int[] bestMove = new int[4];
+		for(int i=0; i<possibleBoards.size(); i++) {
+			int eval = boardScore(possibleBoards.get(i),1);
+			if(eval<minBoardScore) {
+				bestMove = possibleMoves.get(i);
+				minBoardScore = eval;
+			}
+		}
+
+		System.out.println("Alpha-Beta Prunes: " + totalPruneCount[0]);
+		System.out.println("Leafs Visited: " + totalPruneCount[1]);
+		
+		executor.shutdownNow();
+		return bestMove;
+	}
 	
-	private int[][] cloneBoard(int[][] board) {
+	private static int[][] cloneBoard(int[][] board) {
 		int[][] newBoard = new int[8][8];
 		for(int i=0;i<8;i++) {
 			for(int k=0;k<8;k++) {
@@ -455,17 +429,5 @@ public class checkersAI {
 			}
 		}
 		return newBoard;
-	}
-	
-	private class Node {
-		
-		private Node(int[][] board) {
-			this.board = board;
-		}
-		
-		private Node() {}
-		
-		int[][] board;
-		ArrayList<Node> children = new ArrayList<Node>();
 	}
 }

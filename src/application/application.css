@@ -1,5 +1,9 @@
 /* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
 
+.label {
+	-fx-font-size: 26px;
+}
+
 #square1 {
 	-fx-background-radius: 0;
 	-fx-background-color: tan;

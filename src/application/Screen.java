@@ -1,7 +1,5 @@
 package application;
 
-import java.util.ArrayList;
-
 import javafx.scene.Group;
 import javafx.scene.Node;
 
