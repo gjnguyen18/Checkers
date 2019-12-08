@@ -1,0 +1,71 @@
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+
+.label {
+	-fx-font-size: 26px;
+}
+
+#square1 {
+	-fx-background-radius: 0;
+	-fx-background-color: tan;
+}
+
+#square2 {
+	-fx-background-radius: 0;
+	-fx-background-color: brown;
+}
+
+#redPiece {
+	-fx-background-color: red;
+	-fx-border-color:transparent;
+	-fx-border-width: 3;
+}
+
+#blackPiece {
+	-fx-background-color:#414347;
+	-fx-border-color:transparent;
+	-fx-border-width: 3;
+}
+
+#redKing {
+	-fx-background-color: darkred;
+	-fx-border-color:transparent;
+	-fx-border-width: 3;
+}
+
+#blackKing {
+	-fx-background-color: black;
+	-fx-border-color:transparent;
+	-fx-border-width: 3;
+}
+
+#redKingSelected {
+	-fx-background-color: darkred;
+	-fx-border-color: yellow;
+	-fx-border-width: 3;
+}
+
+#blackKingSelected {
+	-fx-background-color: black;
+	-fx-border-color: yellow;
+	-fx-border-width: 3;
+}
+
+#redPieceSelected {
+	-fx-background-color: red;
+	-fx-border-color: yellow;
+	-fx-border-width: 3;
+}
+
+#blackPieceSelected {
+	-fx-background-color: #414347;
+	-fx-border-color: yellow;
+	-fx-border-width: 3;
+}
+
+#backgroundColor {
+	-fx-background-color: black;
+}
+
+#UIBorder {
+	-fx-background-color: tan;
+}

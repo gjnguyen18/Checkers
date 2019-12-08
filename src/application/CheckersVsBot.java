@@ -42,6 +42,8 @@ public class CheckersVsBot extends Screen {
 	boolean justJumped;
 	boolean pieceLock;
 	
+	public final static int numberOfMovesAhead = 12;
+	
 	public CheckersVsBot(Group root) {
 		super(root);
 		pieceSelectedX = -1;
@@ -69,6 +71,25 @@ public class CheckersVsBot extends Screen {
 		turnLabelBox.setLayoutY(30);
 		turnLabelBox.setPrefSize(200, 100);
 		addElement(turnLabelBox);
+		
+		redPieceCount = new Label("Red Pieces: " + 12);
+		BorderPane redPieceCountBox = new BorderPane(redPieceCount);
+		redPieceCountBox.setLayoutX(640);
+		redPieceCountBox.setLayoutY(130);
+		redPieceCountBox.setPrefSize(200, 30);
+		addElement(redPieceCountBox);
+		
+		blackPieceCount = new Label("Black Pieces: " + 12);
+		BorderPane blackPieceCountBox = new BorderPane(blackPieceCount);
+		blackPieceCountBox.setLayoutX(640);
+		blackPieceCountBox.setLayoutY(160);
+		blackPieceCountBox.setPrefSize(200, 30);
+		addElement(blackPieceCountBox);
+	}
+	
+	private void updateUI() {
+		redPieceCount.setText("Red Pieces: " + numberOfRed());
+		blackPieceCount.setText("Black Pieces: " + numberOfBlack());
 	}
 	
 	private void generateBoard() {
@@ -91,7 +112,25 @@ public class CheckersVsBot extends Screen {
 		}
 	}
 	
-	public boolean move(int pieceX, int pieceY, int targetX, int targetY) {
+	private boolean undoMove() {
+		if(moves.isEmpty())
+			return false;
+		else {
+			
+			try {
+	  		Platform.runLater(new Runnable() {
+		      @Override
+		      public void run() {
+		        updateBoardUI();
+		      }
+		    });
+	  		Thread.sleep(500);
+			} catch (InterruptedException e) {}
+			return true;
+		}
+	}
+	
+	private boolean move(int pieceX, int pieceY, int targetX, int targetY) {
 		if(pieceX<0 && pieceY<0) {
 			return false;
 		}
@@ -164,7 +203,7 @@ public class CheckersVsBot extends Screen {
 			pieceSelectedY = -1;
 			if(turn==1) {
 				turn = 2;
-				System.out.println("Black Move: "+numberOfBlackMoves());
+				System.out.println("Black Moves: "+numberOfBlackMoves());
 			}
 			else {
 				turn = 1;
@@ -176,7 +215,8 @@ public class CheckersVsBot extends Screen {
 			    @Override 
 			    public Void call() {				
 			    	long timeStart = System.currentTimeMillis();
-			    	int[] bestMove = CheckersAI.findBestMove(board, 12, 2, true);
+			    	//AI MOVE
+			    	int[] bestMove = CheckersAI.findBestMove(board, numberOfMovesAhead, 2, true);
 			    	for(int i=0;i<bestMove.length;i+=4) {
 			    		try {
 					  		Platform.runLater(new Runnable() {
@@ -533,6 +573,7 @@ public class CheckersVsBot extends Screen {
 			}
 		}
 		addElement(boardUI);
+		updateUI();
 	}
 	
 	private int numberOfRed() {
